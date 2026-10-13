@@ -8,6 +8,7 @@ import {
   createCopilotHonoHandler,
   type CopilotHonoApp,
 } from '@copilotkit/runtime/v2';
+import { SqliteAgentRunner } from '@copilotkit/sqlite-runner';
 import { createSlackChannel } from './slack-channel.js';
 export { slackIdentity } from './slack-channel.js';
 import { Store } from './store.js';
@@ -44,7 +45,7 @@ export class Platform {
     this.connections = new ConnectionService(workspace.connections);
     this.pages = new PageService(workspace, () => {
       this.requireReady();
-      return this.intelligence!;
+      return this.intelligence ?? undefined;
     });
     // Intelligence is optional. Without a key, the runtime serves agents
     // directly and threads persist in the local SQLite workspace store.
@@ -83,8 +84,16 @@ export class Platform {
       channels.push(slack);
     }
     const runtime = new CopilotRuntime({
-      // Intelligence mode when a key is set; plain agent mode otherwise.
-      ...(this.intelligence ? { intelligence: this.intelligence } : {}),
+      // Intelligence mode when a key is set; local SQLite runner otherwise.
+      // Threads persist locally without any CopilotKit cloud account.
+      ...(this.intelligence
+        ? { intelligence: this.intelligence }
+        : {
+            runner: new SqliteAgentRunner({
+              dbPath:
+                process.env.THREADS_DB_PATH ?? 'data/threads.sqlite',
+            }),
+          }),
       telemetryId: this.setupTelemetry.identity,
       telemetryProperties: this.setupTelemetry.metadata,
       identifyUser: async () => ({

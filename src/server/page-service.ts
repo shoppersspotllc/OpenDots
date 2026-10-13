@@ -41,7 +41,7 @@ export class PageService {
   >();
   constructor(
     private workspace: WorkspaceStore,
-    private intelligence: () => PageIntelligence,
+    private intelligence: () => PageIntelligence | undefined,
   ) {}
   async conversation(spaceId: string, pageId: string, dotId: string) {
     const page = this.workspace.pages.get(spaceId, pageId);
@@ -67,14 +67,17 @@ export class PageService {
         );
       const threadId = this.workspace.pages.thread(pageId, dotId)!.threadId;
       try {
-        await bounded(
-          sdk.getOrCreateThread({
-            threadId,
-            userId: this.workspace.ownerId,
-            agentId: dotId,
-            name: page.title,
-          }),
-        );
+        // Without Intelligence, threads live only in the local workspace store.
+        if (sdk) {
+          await bounded(
+            sdk.getOrCreateThread({
+              threadId,
+              userId: this.workspace.ownerId,
+              agentId: dotId,
+              name: page.title,
+            }),
+          );
+        }
         if (!this.workspace.canAccessSpace(dotId, spaceId))
           throw new PageError('Space access has been revoked.');
         const thread =
@@ -101,8 +104,16 @@ export class PageService {
   ) {
     const thread = this.workspace.requireThread(threadId);
     const dot = this.workspace.dot(thread.dotId)!;
+    const sdk = this.intelligence();
+    if (!sdk) {
+      throw new PageError(
+        'Saving conversations as pages requires CopilotKit Intelligence. ' +
+          'Chat works normally; only page-saving is unavailable.',
+        503,
+      );
+    }
     const history = await bounded(
-      this.intelligence().getThreadMessages({
+      sdk.getThreadMessages({
         threadId,
         userId: this.workspace.ownerId,
       }),
