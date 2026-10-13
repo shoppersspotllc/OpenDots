@@ -83,17 +83,9 @@ export class Platform {
       });
       channels.push(slack);
     }
-    const runtime = new CopilotRuntime({
-      // Intelligence mode when a key is set; local SQLite runner otherwise.
-      // Threads persist locally without any CopilotKit cloud account.
-      ...(this.intelligence
-        ? { intelligence: this.intelligence }
-        : {
-            runner: new SqliteAgentRunner({
-              dbPath:
-                process.env.THREADS_DB_PATH ?? 'data/threads.sqlite',
-            }),
-          }),
+    // Intelligence mode when a key is set; local SQLite runner otherwise.
+    // Threads persist locally without any CopilotKit cloud account.
+    const runtimeOptions = {
       telemetryId: this.setupTelemetry.identity,
       telemetryProperties: this.setupTelemetry.metadata,
       identifyUser: async () => ({
@@ -118,7 +110,15 @@ export class Platform {
         ),
       channels,
       generateThreadNames: true,
-    });
+    };
+    const runtime = this.intelligence
+      ? new CopilotRuntime({ ...runtimeOptions, intelligence: this.intelligence })
+      : new CopilotRuntime({
+          ...runtimeOptions,
+          runner: new SqliteAgentRunner({
+            dbPath: process.env.THREADS_DB_PATH ?? 'data/threads.sqlite',
+          }),
+        });
     this.handler = createCopilotHonoHandler({
       runtime,
       basePath: '/api/copilotkit',

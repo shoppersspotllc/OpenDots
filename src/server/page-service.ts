@@ -109,7 +109,7 @@ export class PageService {
       throw new PageError(
         'Saving conversations as pages requires CopilotKit Intelligence. ' +
           'Chat works normally; only page-saving is unavailable.',
-        503,
+        400,
       );
     }
     const history = await bounded(
