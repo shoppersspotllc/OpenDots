@@ -46,16 +46,20 @@ export class Platform {
       this.requireReady();
       return this.intelligence!;
     });
-    if (!config.intelligenceKey) return;
-    this.intelligence = new CopilotKitIntelligence({
-      apiKey: config.intelligenceKey,
-      apiUrl: config.intelligenceApiUrl,
-      wsUrl: config.intelligenceWsUrl,
-      getLearningContainerId: learningSelector(
-        workspace,
-        config.slackDotId ?? workspace.dots()[0]?.id,
-      ),
-    });
+    // Intelligence is optional. Without a key, the runtime serves agents
+    // directly and threads persist in the local SQLite workspace store.
+    // (Slack channels still require Intelligence for managed delivery.)
+    if (config.intelligenceKey) {
+      this.intelligence = new CopilotKitIntelligence({
+        apiKey: config.intelligenceKey,
+        apiUrl: config.intelligenceApiUrl,
+        wsUrl: config.intelligenceWsUrl,
+        getLearningContainerId: learningSelector(
+          workspace,
+          config.slackDotId ?? workspace.dots()[0]?.id,
+        ),
+      });
+    }
     const channels = [];
     if (config.slackChannel && config.slackTeam && config.slackUsers.length) {
       const dotId = config.slackDotId ?? workspace.dots()[0].id;
@@ -79,7 +83,8 @@ export class Platform {
       channels.push(slack);
     }
     const runtime = new CopilotRuntime({
-      intelligence: this.intelligence,
+      // Intelligence mode when a key is set; plain agent mode otherwise.
+      ...(this.intelligence ? { intelligence: this.intelligence } : {}),
       telemetryId: this.setupTelemetry.identity,
       telemetryProperties: this.setupTelemetry.metadata,
       identifyUser: async () => ({

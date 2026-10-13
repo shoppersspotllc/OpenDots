@@ -51,22 +51,16 @@ it('reports either accepted name from the same label used by setup status and th
   });
   expect(INTELLIGENCE_KEY_MISSING_LABEL).toContain('CPK_INTELLIGENCE_API_KEY');
   expect(INTELLIGENCE_KEY_MISSING_LABEL).toContain('INTELLIGENCE_API_KEY');
-  expect(setupStatus(configured).missing).toContain(
-    INTELLIGENCE_KEY_MISSING_LABEL,
-  );
+  // Intelligence is optional: model-only config is fully set up.
+  expect(setupStatus(configured).missing).toEqual([]);
 
   const store = new Store(':memory:');
   const workspace = new WorkspaceStore(':memory:', 'owner');
   try {
     const platform = new Platform(store, workspace, configured);
-    const response = await platform.handle(
-      new Request('http://127.0.0.1/api/copilotkit/info'),
-    );
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      error: `Setup required: ${INTELLIGENCE_KEY_MISSING_LABEL}.`,
-    });
-    expect(platform.setup().missing).toContain(INTELLIGENCE_KEY_MISSING_LABEL);
+    // Without Intelligence, the runtime handler still serves agents.
+    expect(platform.setup().missing).toEqual([]);
+    expect(platform.setup().intelligence).toBe(false);
   } finally {
     store.close();
     workspace.close();
