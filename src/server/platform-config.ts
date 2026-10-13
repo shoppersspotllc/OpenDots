@@ -62,8 +62,9 @@ export function setupStatus(
   slack = 'not_configured',
   activationFailed = false,
 ): SetupStatus {
+  // Intelligence key is optional (local SQLite persists threads).
+  // Only the model backend is required.
   const missing = [
-    !config.intelligenceKey && INTELLIGENCE_KEY_MISSING_LABEL,
     !config.apiKey && 'OPENAI_API_KEY',
     !config.model && 'OPENAI_MODEL',
   ].filter((item): item is string => !!item);
