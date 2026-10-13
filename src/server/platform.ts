@@ -112,7 +112,10 @@ export class Platform {
       generateThreadNames: true,
     };
     const runtime = this.intelligence
-      ? new CopilotRuntime({ ...runtimeOptions, intelligence: this.intelligence })
+      ? new CopilotRuntime({
+          ...runtimeOptions,
+          intelligence: this.intelligence,
+        })
       : new CopilotRuntime({
           ...runtimeOptions,
           runner: new SqliteAgentRunner({
